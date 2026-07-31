@@ -5,7 +5,21 @@ const crypto = require('crypto');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    // MUHIM: Telegram mini-ilova ichki brauzeri game.html'ni ba'zan
+    // eski holatda keshlab qo'yadi. Bu HTML fayl uchun keshni butunlay
+    // o'chiradi, shunda har safar eng yangi versiya yuklanadi.
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+  }
+}));
+
+// Har bir deploy'da o'zgartiring - bu Telegram'ga "sahifa yangilangan,
+// keshni ishlatma" deb signal beradi (query parametr o'zgarsa, URL yangi
+// resurs sifatida qabul qilinadi)
+const GAME_VERSION = 'v4';
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
@@ -106,7 +120,7 @@ async function sendPlayButton(chatId) {
     chat_id: chatId,
     text: "Ajoyib! Endi barabanni aylantirishingiz mumkin 🎉",
     reply_markup: {
-      keyboard: [[{ text: "🎡 O'yinni boshlash", web_app: { url: APP_URL + "/game.html" } }]],
+      keyboard: [[{ text: "🎡 O'yinni boshlash", web_app: { url: APP_URL + "/game.html?" + GAME_VERSION } }]],
       resize_keyboard: true
     }
   });
@@ -238,7 +252,7 @@ app.post('/webhook', (req, res) => {
               chat_id: Number(referrerId),
               text: "🎉 Ajoyib! Do'stingiz taklifingiz orqali qo'shildi.\nSizga qo'shimcha +1 aylantirish imkoniyati berildi!",
               reply_markup: {
-                keyboard: [[{ text: "🎡 O'yinni boshlash", web_app: { url: APP_URL + "/game.html" } }]],
+                keyboard: [[{ text: "🎡 O'yinni boshlash", web_app: { url: APP_URL + "/game.html?" + GAME_VERSION } }]],
                 resize_keyboard: true
               }
             }).catch(() => {});
